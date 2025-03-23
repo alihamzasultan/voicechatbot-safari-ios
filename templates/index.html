@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice to Text</title>
+</head>
+<body>
+    <h1>Voice to Text Web App</h1>
+    <button id="start-recording">Start Recording</button>
+    <button id="stop-recording">Stop Recording</button>
+    <p id="output">Transcription will appear here...</p>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        async function requestMicrophoneAccess() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                console.log("✅ Microphone access granted");
+                return stream;
+            } catch (error) {
+                console.error("❌ Microphone access denied:", error);
+                alert("Please enable microphone access in your browser settings.");
+                return null;
+            }
+        }
+
+        async function startRecording() {
+            const stream = await requestMicrophoneAccess();
+            if (!stream) return;
+
+            audioChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+                const formData = new FormData();
+                formData.append("audio", audioBlob, "recorded_audio.wav");
+
+                try {
+                    const response = await fetch("/transcribe", {
+                        method: "POST",
+                        body: formData
+                    });
+                    const data = await response.json();
+                    document.getElementById("output").innerText = data.text || "Error: " + data.error;
+                } catch (error) {
+                    console.error("Error uploading file:", error);
+                }
+            };
+
+            mediaRecorder.start();
+            console.log("🎙️ Recording started...");
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+                console.log("🛑 Recording stopped.");
+            }
+        }
+
+        document.getElementById("start-recording").addEventListener("click", startRecording);
+        document.getElementById("stop-recording").addEventListener("click", stopRecording);
+    </script>
+</body>
+</html>
