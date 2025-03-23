@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# Load Whisper model once
+# Load Whisper model onc
 model = whisper.load_model("base")
 
 @app.route("/")
