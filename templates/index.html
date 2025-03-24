@@ -3,17 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice to Text</title>
+    <title>Voice Recorder</title>
+    <style>
+        #listening-indicator {
+            display: none;
+            color: red;
+            font-weight: bold;
+        }
+        .dot {
+            height: 10px;
+            width: 10px;
+            background-color: red;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        #audio-player {
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Voice to Text Web App</h1>
+    <h1>Voice Recorder</h1>
     <button id="start-recording">Start Recording</button>
     <button id="stop-recording">Stop Recording</button>
-    <p id="output">Transcription will appear here...</p>
+    <p id="listening-indicator"><span class="dot"></span> Listening...</p>
+    <audio id="audio-player" controls></audio>
 
     <script>
         let mediaRecorder;
         let audioChunks = [];
+        const indicator = document.getElementById("listening-indicator");
+        const audioPlayer = document.getElementById("audio-player");
 
         async function requestMicrophoneAccess() {
             try {
@@ -33,6 +55,7 @@
 
             audioChunks = [];
             mediaRecorder = new MediaRecorder(stream);
+            indicator.style.display = "block";
 
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
@@ -40,21 +63,12 @@
                 }
             };
 
-            mediaRecorder.onstop = async () => {
+            mediaRecorder.onstop = () => {
+                indicator.style.display = "none";
                 const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
-                const formData = new FormData();
-                formData.append("audio", audioBlob, "recorded_audio.wav");
-
-                try {
-                    const response = await fetch("/transcribe", {
-                        method: "POST",
-                        body: formData
-                    });
-                    const data = await response.json();
-                    document.getElementById("output").innerText = data.text || "Error: " + data.error;
-                } catch (error) {
-                    console.error("Error uploading file:", error);
-                }
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioPlayer.src = audioUrl;
+                audioPlayer.style.display = "block";
             };
 
             mediaRecorder.start();
